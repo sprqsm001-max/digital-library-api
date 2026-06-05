@@ -9,12 +9,27 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from routers import auth, books, users, admin
 
+from contextlib import asynccontextmanager
+
 load_dotenv()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    try:
+        from database import tunnel
+        if tunnel:
+            print("Stopping SSH Tunnel...")
+            tunnel.stop()
+            print("SSH Tunnel stopped.")
+    except Exception as e:
+        print(f"Error closing SSH tunnel: {e}")
 
 app = FastAPI(
     title="Digital Library API",
     description="Backend for the African Digital Library",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS config

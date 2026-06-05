@@ -11,3 +11,13 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: SSH_HOST
+        sync: false
+      - key: SSH_PORT
+        sync: false
+        default: "22"
+      - key: SSH_USERNAME
+        sync: false
+      - key: SSH_PASSWORD
+        sync: false
+

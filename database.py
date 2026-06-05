@@ -8,6 +8,37 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+SSH_HOST = os.getenv("SSH_HOST")
+SSH_PORT = int(os.getenv("SSH_PORT", "22"))
+SSH_USERNAME = os.getenv("SSH_USERNAME")
+SSH_PASSWORD = os.getenv("SSH_PASSWORD")
+
+tunnel = None
+
+if SSH_HOST and SSH_USERNAME:
+    try:
+        from sshtunnel import SSHTunnelForwarder
+        tunnel = SSHTunnelForwarder(
+            (SSH_HOST, SSH_PORT),
+            ssh_username=SSH_USERNAME,
+            ssh_password=SSH_PASSWORD,
+            remote_bind_address=('127.0.0.1', 5432),
+            local_bind_address=('127.0.0.1', 5433)
+        )
+        tunnel.start()
+        print("SSH Tunnel started successfully.")
+        
+        # Rewrite DATABASE_URL to use the local endpoint of the tunnel
+        if DATABASE_URL:
+            for schema in ["postgresql://", "postgres://"]:
+                if DATABASE_URL.startswith(schema):
+                    rest = DATABASE_URL[len(schema):]
+                    creds, path = rest.split("@", 1)
+                    host_port, dbname = path.split("/", 1)
+                    DATABASE_URL = f"{schema}{creds}@127.0.0.1:5433/{dbname}"
+                    break
+    except Exception as e:
+        print(f"Failed to start SSH Tunnel: {e}")
 
 if not DATABASE_URL:
     # Fallback to an empty string during imports/testing if needed
@@ -33,3 +64,4 @@ def get_db():
         yield db
     finally:
         db.close()
+
