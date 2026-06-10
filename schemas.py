@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -82,27 +82,34 @@ class BookBase(BaseModel):
     subtitle: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
-    file_url: str
-    file_type: str = "epub"
+    file_url: Optional[str] = None  # Made optional for legacy data
+    file_type: Optional[str] = "epub"
     file_size_kb: Optional[int] = None
-    language: str = "English"
+    language: Optional[str] = "English"
     publication_year: Optional[int] = None
     publisher: Optional[str] = None
     isbn: Optional[str] = None
-    published_status: str = "Draft"
+    published_status: Optional[str] = "Draft"
 
-    # Categorization Taxonomies
-    target_audience: List[str] = []
+    # Categorization Taxonomies - made optional for legacy data
+    target_audience: Optional[List[str]] = []
     reading_level: Optional[str] = None
-    content_advisory: List[str] = []
+    content_advisory: Optional[List[str]] = []
 
     category_id: Optional[int] = None
-    tags: List[str] = []
+    tags: Optional[List[str]] = []
     is_public: bool = True
+
+    @field_validator('target_audience', 'content_advisory', 'tags', mode='before')
+    @classmethod
+    def ensure_list(cls, v):
+        if v is None:
+            return []
+        return v
 
 class BookCreate(BookBase):
     author_ids: List[int] = []
-    author_names: List[str] = [] # For auto-ingestion to create authors on the fly
+    author_names: List[str] = []
 
 class BookUpdate(BaseModel):
     title: Optional[str] = None
@@ -128,8 +135,8 @@ class BookUpdate(BaseModel):
 class BookResponse(BookBase):
     id: int
     authors: List[AuthorResponse] = []
-    download_count: int
-    view_count: int
+    download_count: int = 0
+    view_count: int = 0
     uploaded_by: Optional[int] = None
     created_at: datetime
     updated_at: datetime
@@ -162,6 +169,7 @@ class ReadingHistoryResponse(BaseModel):
     book_id: int
     last_read_at: datetime
     read_count: int
+    progress_percent: int = 0
     book: Optional[BookResponse] = None
 
     class Config:
@@ -192,3 +200,10 @@ class PaginatedBookResponse(BaseModel):
     page: int
     limit: int
     total_pages: int
+
+# Ingestion specific
+class IngestResponse(BaseModel):
+    success: bool
+    message: str
+    book_id: Optional[int] = None
+    metadata: Optional[dict] = None
