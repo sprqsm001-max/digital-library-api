@@ -1,19 +1,19 @@
 import re
 
 def sanitize_search_query(query: str) -> str:
-    \"\"\"
+    """
     Sanitizes search query for PostgreSQL Full Text Search
     Removes special characters and handles empty queries
-    \"\"\"
+    """
     if not query:
-        return \"\"
+        return ""
     
     # Remove special characters that could break FTS query
     # Keep alphanumeric and spaces
     clean_query = re.sub(r'[^\w\s]', ' ', query)
     
     # Normalize spaces
-    clean_query = \" \".join(clean_query.split())
+    clean_query = " ".join(clean_query.split())
     
     # Replace spaces with & for to_tsquery if needed,
     # but we usually use plainto_tsquery which handles spaces.
@@ -21,13 +21,13 @@ def sanitize_search_query(query: str) -> str:
     return clean_query
 
 def setup_fts_sql():
-    \"\"\"
+    """
     Returns the SQL to setup Full Text Search on the books table.
     This should be run manually or via a migration script.
-    \"\"\"
-    return \"\"\"
+    """
+    return """
     -- Create a function to update the search_vector
-    CREATE OR REPLACE FUNCTION books_search_vector_update() RETURNS trigger AS \$BODY\$
+    CREATE OR REPLACE FUNCTION books_search_vector_update() RETURNS trigger AS $BODY$
     BEGIN
       new.search_vector :=
         setweight(to_tsvector('english', coalesce(new.title,'')), 'A') ||
@@ -35,7 +35,7 @@ def setup_fts_sql():
         setweight(to_tsvector('english', coalesce(new.description,'')), 'C');
       return new;
     END
-    \$BODY\$ LANGUAGE plpgsql;
+    $BODY$ LANGUAGE plpgsql;
 
     -- Create the trigger
     DROP TRIGGER IF EXISTS tsvectorupdate ON books;
@@ -44,4 +44,4 @@ def setup_fts_sql():
 
     -- Update existing rows to populate search_vector
     UPDATE books SET title = title;
-    \"\"\"
+    """
