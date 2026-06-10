@@ -3,6 +3,14 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
 from database import Base
 
+# Many-to-Many association table for Books and Authors
+book_authors = Table(
+    "book_authors",
+    Base.metadata,
+    Column("book_id", Integer, ForeignKey("books.id", ondelete="CASCADE"), primary_key=True),
+    Column("author_id", Integer, ForeignKey("authors.id", ondelete="CASCADE"), primary_key=True),
+)
+
 class User(Base):
     __tablename__ = "users"
 
@@ -19,6 +27,17 @@ class User(Base):
     bookmarks = relationship("Bookmark", back_populates="user", cascade="all, delete-orphan")
     reading_history = relationship("ReadingHistory", back_populates="user", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
+
+
+class Author(Base):
+    __tablename__ = "authors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, nullable=False, index=True)
+    biography = Column(Text, nullable=True)
+
+    # Relationships
+    books = relationship("Book", secondary=book_authors, back_populates="authors")
 
 
 class Category(Base):
@@ -40,16 +59,23 @@ class Book(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(500), nullable=False, index=True)
-    author = Column(String(300), index=True)
+    subtitle = Column(String(500), nullable=True)
     description = Column(Text)
     cover_image_url = Column(Text, nullable=True)
-    file_url = Column(Text, nullable=True)
-    file_type = Column(String(20))  # pdf, epub, txt
+    file_url = Column(Text, nullable=False)  # Strictly required EPUB
+    file_type = Column(String(20), default="epub")
     file_size_kb = Column(Integer)
     language = Column(String(50), default="English")
     publication_year = Column(Integer)
     publisher = Column(String(200))
     isbn = Column(String(50))
+    published_status = Column(String(20), default="Draft")  # Draft or Live
+
+    # Categorization Taxonomies
+    target_audience = Column(ARRAY(String), nullable=True)  # Scholars, Students, General readers, Children
+    reading_level = Column(String(100), nullable=True)     # Beginner, Intermediate, Advanced, Academic
+    content_advisory = Column(ARRAY(String), nullable=True) # Mature themes, Violence, Colonial-era language
+
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
     tags = Column(ARRAY(String), nullable=True)
     is_public = Column(Boolean, default=True)
@@ -63,6 +89,7 @@ class Book(Base):
     search_vector = Column(TSVECTOR, index=False, nullable=True)
 
     # Relationships
+    authors = relationship("Author", secondary=book_authors, back_populates="books")
     uploader = relationship("User", back_populates="uploaded_books")
     category = relationship("Category", back_populates="books")
     bookmarks = relationship("Bookmark", back_populates="book", cascade="all, delete-orphan")

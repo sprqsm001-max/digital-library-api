@@ -10,3 +10,5 @@ python-jose[cryptography]
 passlib[bcrypt]
 httpx
 sshtunnel
+ebooklib
+beautifulsoup4

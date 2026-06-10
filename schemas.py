@@ -27,7 +27,20 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
+
+# Author schemas
+class AuthorBase(BaseModel):
+    name: str
+    biography: Optional[str] = None
+
+class AuthorCreate(AuthorBase):
+    pass
+
+class AuthorResponse(AuthorBase):
+    id: int
+
+    class Config:
+        from_attributes = True
 
 # Category schemas
 class CategoryBase(BaseModel):
@@ -44,7 +57,6 @@ class CategoryResponse(CategoryBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 # Review schemas
 class ReviewBase(BaseModel):
@@ -59,35 +71,42 @@ class ReviewResponse(ReviewBase):
     user_id: int
     book_id: int
     created_at: datetime
-    username: Optional[str] = None  # Add username helper for frontend reviews
+    username: Optional[str] = None
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 # Book schemas
 class BookBase(BaseModel):
     title: str
-    author: Optional[str] = None
+    subtitle: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
-    file_url: Optional[str] = None
-    file_type: Optional[str] = None
+    file_url: str
+    file_type: str = "epub"
     file_size_kb: Optional[int] = None
-    language: Optional[str] = "English"
+    language: str = "English"
     publication_year: Optional[int] = None
     publisher: Optional[str] = None
     isbn: Optional[str] = None
+    published_status: str = "Draft"
+
+    # Categorization Taxonomies
+    target_audience: List[str] = []
+    reading_level: Optional[str] = None
+    content_advisory: List[str] = []
+
     category_id: Optional[int] = None
-    tags: Optional[List[str]] = []
-    is_public: Optional[bool] = True
+    tags: List[str] = []
+    is_public: bool = True
 
 class BookCreate(BookBase):
-    pass
+    author_ids: List[int] = []
+    author_names: List[str] = [] # For auto-ingestion to create authors on the fly
 
 class BookUpdate(BaseModel):
     title: Optional[str] = None
-    author: Optional[str] = None
+    subtitle: Optional[str] = None
     description: Optional[str] = None
     cover_image_url: Optional[str] = None
     file_url: Optional[str] = None
@@ -97,12 +116,18 @@ class BookUpdate(BaseModel):
     publication_year: Optional[int] = None
     publisher: Optional[str] = None
     isbn: Optional[str] = None
+    published_status: Optional[str] = None
+    target_audience: Optional[List[str]] = None
+    reading_level: Optional[str] = None
+    content_advisory: Optional[List[str]] = None
     category_id: Optional[int] = None
     tags: Optional[List[str]] = None
     is_public: Optional[bool] = None
+    author_ids: Optional[List[int]] = None
 
 class BookResponse(BookBase):
     id: int
+    authors: List[AuthorResponse] = []
     download_count: int
     view_count: int
     uploaded_by: Optional[int] = None
@@ -111,7 +136,6 @@ class BookResponse(BookBase):
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 class BookDetailResponse(BookResponse):
     category: Optional[CategoryResponse] = None
@@ -119,7 +143,6 @@ class BookDetailResponse(BookResponse):
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 # Bookmark schemas
 class BookmarkResponse(BaseModel):
@@ -131,7 +154,6 @@ class BookmarkResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 # Reading History schemas
 class ReadingHistoryResponse(BaseModel):
@@ -144,11 +166,11 @@ class ReadingHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        orm_mode = True
 
 # Admin stats schema
 class AdminStats(BaseModel):
     total_books: int
+    total_authors: int
     total_users: int
     total_downloads: int
     total_views: int
