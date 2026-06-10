@@ -69,6 +69,14 @@ def login(login_in: LoginRequest, db: Session = Depends(get_db)):
 def get_me(current_user: models.User = Depends(get_current_active_user)):
     return current_user
 
+@router.post("/change-password")
+def change_password(request: schemas.PasswordChangeRequest, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    if not verify_password(request.old_password, current_user.password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect old password")
+    current_user.password_hash = get_password_hash(request.new_password)
+    db.commit()
+    return {"detail": "Password updated successfully"}
+
 @router.post("/logout")
 def logout():
     # Since we are using stateless JWT tokens, client-side handles deletion

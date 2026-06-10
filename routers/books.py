@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
+import math
 from database import get_db
 import models
 import schemas
@@ -9,7 +10,7 @@ from utils.search import sanitize_search_query
 
 router = APIRouter()
 
-@router.get("", response_model=List[schemas.BookResponse])
+@router.get("", response_model=schemas.PaginatedBookResponse)
 def list_books(
     page: int = Query(1, ge=1),
     limit: int = Query(12, ge=1, le=100),
@@ -17,6 +18,7 @@ def list_books(
     language: Optional[str] = None,
     year: Optional[int] = None,
     author: Optional[str] = None,
+    tag: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Book).filter(models.Book.is_public == True)
@@ -29,10 +31,20 @@ def list_books(
         query = query.filter(models.Book.publication_year == year)
     if author:
         query = query.filter(models.Book.author.ilike(f"%{author}%"))
+    if tag:
+        query = query.filter(models.Book.tags.any(tag))
         
+    total_count = query.count()
     offset = (page - 1) * limit
     books = query.order_by(desc(models.Book.created_at)).offset(offset).limit(limit).all()
-    return books
+
+    return schemas.PaginatedBookResponse(
+        items=books,
+        total_count=total_count,
+        page=page,
+        limit=limit,
+        total_pages=math.ceil(total_count / limit) if total_count > 0 else 0
+    )
 
 @router.get("/featured", response_model=List[schemas.BookResponse])
 def get_featured_books(limit: int = Query(6, ge=1, le=20), db: Session = Depends(get_db)):
@@ -45,7 +57,7 @@ def get_featured_books(limit: int = Query(6, ge=1, le=20), db: Session = Depends
     ).limit(limit).all()
     return books
 
-@router.get("/search", response_model=List[schemas.BookResponse])
+@router.get("/search", response_model=schemas.PaginatedBookResponse)
 def search_books(
     q: str = Query(..., min_length=1),
     page: int = Query(1, ge=1),
@@ -54,7 +66,9 @@ def search_books(
 ):
     clean_query = sanitize_search_query(q)
     if not clean_query:
-        return []
+        return schemas.PaginatedBookResponse(
+            items=[], total_count=0, page=page, limit=limit, total_pages=0
+        )
         
     # PostgreSQL FTS plainto_tsquery search query
     ts_query = func.plainto_tsquery("english", clean_query)
@@ -62,18 +76,27 @@ def search_books(
     # Order results by relevance score (ts_rank_cd)
     rank = func.ts_rank_cd(models.Book.search_vector, ts_query)
     
-    offset = (page - 1) * limit
-    books = db.query(models.Book).filter(
+    query = db.query(models.Book).filter(
         models.Book.is_public == True,
         models.Book.search_vector.op("@@")(ts_query)
-    ).order_by(
+    )
+
+    total_count = query.count()
+    offset = (page - 1) * limit
+    books = query.order_by(
         desc(rank),
         desc(models.Book.created_at)
     ).offset(offset).limit(limit).all()
     
-    return books
+    return schemas.PaginatedBookResponse(
+        items=books,
+        total_count=total_count,
+        page=page,
+        limit=limit,
+        total_pages=math.ceil(total_count / limit) if total_count > 0 else 0
+    )
 
-@router.get("/category/{slug}", response_model=List[schemas.BookResponse])
+@router.get("/category/{slug}", response_model=schemas.PaginatedBookResponse)
 def get_books_by_category(
     slug: str,
     page: int = Query(1, ge=1),
@@ -91,15 +114,24 @@ def get_books_by_category(
     subcategories = db.query(models.Category).filter(models.Category.parent_id == category.id).all()
     category_ids = [category.id] + [sub.id for sub in subcategories]
     
-    offset = (page - 1) * limit
-    books = db.query(models.Book).filter(
+    query = db.query(models.Book).filter(
         models.Book.is_public == True,
         models.Book.category_id.in_(category_ids)
-    ).order_by(
+    )
+
+    total_count = query.count()
+    offset = (page - 1) * limit
+    books = query.order_by(
         desc(models.Book.created_at)
     ).offset(offset).limit(limit).all()
     
-    return books
+    return schemas.PaginatedBookResponse(
+        items=books,
+        total_count=total_count,
+        page=page,
+        limit=limit,
+        total_pages=math.ceil(total_count / limit) if total_count > 0 else 0
+    )
 
 @router.get("/{id}", response_model=schemas.BookDetailResponse)
 def get_book_detail(id: int, db: Session = Depends(get_db)):

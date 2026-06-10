@@ -153,3 +153,20 @@ class AdminStats(BaseModel):
     total_downloads: int
     total_views: int
     total_reviews: int
+
+# Profile Update schemas
+class PasswordChangeRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=8)
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+
+# Paginated Response schemas
+class PaginatedBookResponse(BaseModel):
+    items: List[BookResponse]
+    total_count: int
+    page: int
+    limit: int
+    total_pages: int
