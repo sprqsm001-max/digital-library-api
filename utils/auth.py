@@ -4,6 +4,35 @@ from typing import Optional, List
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+
+# Monkeypatch bcrypt to fix passlib compatibility issue with newer bcrypt versions
+import bcrypt
+if not hasattr(bcrypt, "__about__"):
+    class BcryptAbout:
+        __version__ = getattr(bcrypt, "__version__", "4.0.0")
+    bcrypt.__about__ = BcryptAbout()
+
+# Monkeypatch hashpw and checkpw to truncate passwords to 72 bytes to avoid ValueError in newer bcrypt versions
+orig_hashpw = bcrypt.hashpw
+def patched_hashpw(password, salt):
+    if isinstance(password, str):
+        password = password.encode('utf-8')
+    if len(password) > 72:
+        password = password[:72]
+    return orig_hashpw(password, salt)
+bcrypt.hashpw = patched_hashpw
+
+orig_checkpw = bcrypt.checkpw
+def patched_checkpw(password, hashed_password):
+    if isinstance(password, str):
+        password = password.encode('utf-8')
+    if len(password) > 72:
+        password = password[:72]
+    if isinstance(hashed_password, str):
+        hashed_password = hashed_password.encode('utf-8')
+    return orig_checkpw(password, hashed_password)
+bcrypt.checkpw = patched_checkpw
+
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from database import get_db
