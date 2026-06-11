@@ -84,5 +84,6 @@ def debug():
         "database_url_set": bool(os.getenv("DATABASE_URL")),
         "tunnel_active": database.tunnel is not None and getattr(database.tunnel, "is_active", False),
         "tunnel_error": getattr(database, "tunnel_error", None),
+        "tunnel_log": getattr(database, "tunnel_log", None),
         "database_url_used": db_url_masked
     }
