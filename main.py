@@ -72,9 +72,11 @@ def debug():
     import os
     # Mask connection details to avoid exposing password
     db_url_masked = None
+    db_username = None
     if database.DATABASE_URL:
         try:
             db_url_masked = database.DATABASE_URL.split("@")[-1]
+            db_username = database.DATABASE_URL.split("://")[-1].split(":")[0]
         except Exception:
             db_url_masked = "present"
             
@@ -100,6 +102,7 @@ def debug():
         "ssh_password_set": bool(os.getenv("SSH_PASSWORD")),
         "ssh_password_mask": ssh_pw_masked,
         "database_url_set": bool(os.getenv("DATABASE_URL")),
+        "db_username": db_username,
         "tunnel_active": database.tunnel is not None and getattr(database.tunnel, "is_active", False),
         "tunnel_error": getattr(database, "tunnel_error", None),
         "tunnel_log": getattr(database, "tunnel_log", None),
