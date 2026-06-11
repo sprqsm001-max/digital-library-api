@@ -44,7 +44,7 @@
   </style></head>
 <body>
 
-  <!-- Intro splash overlay (shows on every page load/reload) -->
+  <!-- Intro splash overlay (shows once per session, then reveals the homepage) -->
   <div id="splash-overlay">
     <div class="splash-wrapper">
       <div class="logo-container">
@@ -66,17 +66,21 @@
     (function () {
       var overlay = document.getElementById('splash-overlay');
       if (!overlay) return;
-
-      // Always show splash on reload
-      document.body.style.overflow = 'hidden';
-      // Play for 2.8s, fade out over 0.7s, then remove
-      setTimeout(function () {
-        overlay.classList.add('splash-fade-out');
+      if (sessionStorage.getItem('splashShown')) {
+        // Already shown this session — reveal homepage immediately
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      } else {
+        sessionStorage.setItem('splashShown', '1');
+        document.body.style.overflow = 'hidden';
+        // Play for 2.8s, fade out over 0.7s, then remove
         setTimeout(function () {
-          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-          document.body.style.overflow = '';
-        }, 700);
-      }, 2800);
+          overlay.classList.add('splash-fade-out');
+          setTimeout(function () {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            document.body.style.overflow = '';
+          }, 700);
+        }, 2800);
+      }
     })();
   </script>
 
