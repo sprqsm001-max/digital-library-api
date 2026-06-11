@@ -81,6 +81,19 @@ def debug():
     ssh_pw = os.getenv("SSH_PASSWORD", "")
     ssh_pw_masked = f"{ssh_pw[:2]}...{ssh_pw[-2:]} (len: {len(ssh_pw)})" if ssh_pw else None
     
+    db_error = None
+    db_query_result = None
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        from sqlalchemy import text
+        res = db.execute(text("SELECT 1")).fetchone()
+        db_query_result = res[0] if res else None
+        db.close()
+    except Exception as e:
+        import traceback
+        db_error = f"{type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+
     return {
         "ssh_host": os.getenv("SSH_HOST"),
         "ssh_username": os.getenv("SSH_USERNAME"),
@@ -90,7 +103,9 @@ def debug():
         "tunnel_active": database.tunnel is not None and getattr(database.tunnel, "is_active", False),
         "tunnel_error": getattr(database, "tunnel_error", None),
         "tunnel_log": getattr(database, "tunnel_log", None),
-        "database_url_used": db_url_masked
+        "database_url_used": db_url_masked,
+        "db_query_result": db_query_result,
+        "db_error": db_error
     }
 
 
