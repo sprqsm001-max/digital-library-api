@@ -1,4 +1,13 @@
 import os
+
+# Monkeypatch paramiko to fix compatibility with older sshtunnel versions
+try:
+    import paramiko
+    if not hasattr(paramiko, "DSSKey"):
+        paramiko.DSSKey = None
+except ImportError:
+    pass
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
