@@ -63,7 +63,15 @@ def login(login_in: LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(
         data={"user_id": user.id, "role": user.role}
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    user_data = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "role": user.role,
+        "is_active": user.is_active,
+        "created_at": user.created_at.isoformat() if user.created_at else None
+    }
+    return {"access_token": access_token, "token_type": "bearer", "user": user_data}
 
 @router.get("/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(get_current_active_user)):
