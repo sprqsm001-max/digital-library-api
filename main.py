@@ -77,10 +77,14 @@ def debug():
         except Exception:
             db_url_masked = "present"
             
+    ssh_pw = os.getenv("SSH_PASSWORD", "")
+    ssh_pw_masked = f"{ssh_pw[:2]}...{ssh_pw[-2:]} (len: {len(ssh_pw)})" if ssh_pw else None
+    
     return {
         "ssh_host": os.getenv("SSH_HOST"),
         "ssh_username": os.getenv("SSH_USERNAME"),
         "ssh_password_set": bool(os.getenv("SSH_PASSWORD")),
+        "ssh_password_mask": ssh_pw_masked,
         "database_url_set": bool(os.getenv("DATABASE_URL")),
         "tunnel_active": database.tunnel is not None and getattr(database.tunnel, "is_active", False),
         "tunnel_error": getattr(database, "tunnel_error", None),
