@@ -32,24 +32,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS config
-FRONTEND_URL = os.getenv("FRONTEND_URL", "*")
+# CORS config — allow live frontend + local dev
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+
 origins = [
-    "https://yourdomain.com",
-    "https://www.yourdomain.com"
+    "https://www.oldafricanbooks.com",
+    "https://oldafricanbooks.com",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
-if FRONTEND_URL and FRONTEND_URL != "*":
+if FRONTEND_URL and FRONTEND_URL not in origins:
     origins.append(FRONTEND_URL)
-    # Include common local development ports
-    origins.extend([
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ])
-else:
-    origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,

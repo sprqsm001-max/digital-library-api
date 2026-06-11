@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List
+from pydantic import BaseModel
 from database import get_db
 import models
 import schemas
@@ -129,3 +130,63 @@ def list_users(
 ):
     users = db.query(models.User).order_by(desc(models.User.created_at)).all()
     return users
+
+
+class RoleUpdate(BaseModel):
+    role: str  # 'reader', 'librarian', 'admin'
+
+
+@router.put("/users/{id}/role", response_model=schemas.UserResponse)
+def update_user_role(
+    id: int,
+    role_in: RoleUpdate,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Promote or demote a user's role (admin only)."""
+    valid_roles = ["reader", "librarian", "admin"]
+    if role_in.role not in valid_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role. Must be one of: {valid_roles}"
+        )
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    # Prevent self-demotion
+    if user.id == current_user.id and role_in.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot demote your own admin account"
+        )
+    user.role = role_in.role
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.put("/users/{id}/toggle", response_model=schemas.UserResponse)
+def toggle_user_active(
+    id: int,
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Activate or deactivate a user account (admin only)."""
+    user = db.query(models.User).filter(models.User.id == id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot deactivate your own account"
+        )
+    user.is_active = not user.is_active
+    db.commit()
+    db.refresh(user)
+    return user
