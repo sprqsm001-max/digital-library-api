@@ -66,28 +66,4 @@ app.include_router(admin.router, prefix="/admin", tags=["admin"])
 def health():
     return {"status": "ok"}
 
-@app.get("/debug")
-def debug():
-    import database
-    # Mask connection details to avoid exposing password
-    db_url_masked = None
-    if database.DATABASE_URL:
-        try:
-            db_url_masked = database.DATABASE_URL.split("@")[-1]
-        except Exception:
-            db_url_masked = "present"
-            
-    ssh_pw = os.getenv("SSH_PASSWORD", "")
-    ssh_pw_masked = f"{ssh_pw[:2]}...{ssh_pw[-2:]} (len: {len(ssh_pw)})" if ssh_pw else None
-    
-    return {
-        "ssh_host": os.getenv("SSH_HOST"),
-        "ssh_username": os.getenv("SSH_USERNAME"),
-        "ssh_password_set": bool(os.getenv("SSH_PASSWORD")),
-        "ssh_password_mask": ssh_pw_masked,
-        "database_url_set": bool(os.getenv("DATABASE_URL")),
-        "tunnel_active": database.tunnel is not None and getattr(database.tunnel, "is_active", False),
-        "tunnel_error": getattr(database, "tunnel_error", None),
-        "tunnel_log": getattr(database, "tunnel_log", None),
-        "database_url_used": db_url_masked
-    }
+

@@ -16,23 +16,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-import logging
-import io
 
-tunnel_log = ""
-log_capture_string = io.StringIO()
-ch = logging.StreamHandler(log_capture_string)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(name)s: %(message)s')
-ch.setFormatter(formatter)
-
-logger = logging.getLogger('sshtunnel')
-logger.setLevel(logging.DEBUG)
-logger.addHandler(ch)
-
-paramiko_logger = logging.getLogger('paramiko')
-paramiko_logger.setLevel(logging.DEBUG)
-paramiko_logger.addHandler(ch)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 SSH_HOST = os.getenv("SSH_HOST")
@@ -69,7 +53,6 @@ if SSH_HOST and SSH_USERNAME:
         tunnel_error = str(e)
         print(f"Failed to start SSH Tunnel: {e}")
 
-tunnel_log = log_capture_string.getvalue()
 
 if not DATABASE_URL:
     # Fallback to an empty string during imports/testing if needed
