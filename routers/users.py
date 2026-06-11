@@ -145,3 +145,25 @@ def submit_review(
     response = schemas.ReviewResponse.from_orm(review)
     response.username = current_user.username
     return response
+
+@router.put("/me", response_model=schemas.UserResponse)
+def update_profile(
+    user_in: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    if user_in.email:
+        existing = db.query(models.User).filter(models.User.email == user_in.email, models.User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        current_user.email = user_in.email
+
+    if user_in.username:
+        existing = db.query(models.User).filter(models.User.username == user_in.username, models.User.id != current_user.id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        current_user.username = user_in.username
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user

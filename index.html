@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Old African Books - Preserving Literary Heritage</title>
+  <link rel="icon" type="image/png" href="images/favicon.png">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Intro splash overlay: fonts + scoped styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    #splash-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background-color: #004170;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      overflow: hidden; font-family: 'Playfair Display', Georgia, serif;
+    }
+    #splash-overlay .splash-wrapper {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 32px; opacity: 0; transform: translateY(20px);
+      animation: splashFadeInUp 0.9s cubic-bezier(0.25,0.8,0.25,1) 0.3s forwards;
+    }
+    #splash-overlay .logo-container { position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; }
+    #splash-overlay .logo-ring { position: absolute; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%); animation: splashPulse 2.5s ease-in-out infinite; }
+    #splash-overlay .logo-img { width: 160px; height: 160px; object-fit: contain; position: relative; z-index: 1; }
+    #splash-overlay .brand-text { text-align: center; }
+    #splash-overlay .brand-name { font-family: 'Playfair Display', Georgia, serif; font-size: 2.2rem; font-weight: 800; color: #FFFFFF; letter-spacing: 0.5px; line-height: 1.2; margin-bottom: 8px; text-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+    #splash-overlay .brand-tagline { font-family: 'Lora', Georgia, serif; font-size: 0.95rem; color: rgba(255,255,255,0.65); font-style: italic; letter-spacing: 1.5px; }
+    #splash-overlay .loading-dots { display: flex; gap: 8px; margin-top: 50px; opacity: 0; animation: splashFadeIn 0.5s ease 1.5s forwards; }
+    #splash-overlay .dot { width: 8px; height: 8px; border-radius: 50%; background-color: rgba(255,255,255,0.5); animation: splashDotBounce 1.2s ease-in-out infinite; }
+    #splash-overlay .dot:nth-child(1) { animation-delay: 0s; }
+    #splash-overlay .dot:nth-child(2) { animation-delay: 0.2s; }
+    #splash-overlay .dot:nth-child(3) { animation-delay: 0.4s; }
+    #splash-overlay.splash-fade-out { animation: splashFadeOutBg 0.7s ease forwards; }
+    #splash-overlay.splash-fade-out .splash-wrapper { animation: splashFadeOut 0.7s cubic-bezier(0.25,0.8,0.25,1) forwards !important; }
+    @keyframes splashFadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes splashFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes splashFadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-15px); } }
+    @keyframes splashFadeOutBg { from { background-color: #004170; } to { background-color: #FAF9F5; } }
+    @keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.6; } }
+    @keyframes splashDotBounce { 0%, 80%, 100% { transform: translateY(0); opacity: 0.5; } 40% { transform: translateY(-10px); opacity: 1; } }
+  </style></head>
+<body>
+
+  <!-- Intro splash overlay (shows on every page load/reload) -->
+  <div id="splash-overlay">
+    <div class="splash-wrapper">
+      <div class="logo-container">
+        <div class="logo-ring"></div>
+        <img class="logo-img" src="images/logo-white-transparent.png?v=2" alt="Old African Books logo">
+      </div>
+      <div class="brand-text">
+        <h1 class="brand-name">Old African Books</h1>
+        <p class="brand-tagline">Preserving African Literary Heritage</p>
+      </div>
+      <div class="loading-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var overlay = document.getElementById('splash-overlay');
+      if (!overlay) return;
+
+      // Always show splash on reload
+      document.body.style.overflow = 'hidden';
+      // Play for 2.8s, fade out over 0.7s, then remove
+      setTimeout(function () {
+        overlay.classList.add('splash-fade-out');
+        setTimeout(function () {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          document.body.style.overflow = '';
+        }, 700);
+      }, 2800);
+    })();
+  </script>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-section" onclick="location.href='index.html'" style="cursor: pointer;">
+        <img src="images/logo-transparent.png?v=2" alt="Old African Books" class="header-logo">
+        <h1>Old African Books</h1>
+      </div>
+      <button id="user-status-btn" class="user-status-btn">
+        <!-- Will be filled by main.js -->
+        <span>Sign In</span>
+      </button>
+    </header>
+
+    <!-- Main Discovery Content -->
+    <main class="view-content">
+      <!-- Search Quick bar -->
+      <div style="margin-bottom: 24px;">
+        <a href="search.html" class="search-box-wrapper" style="text-decoration: none; display: block;">
+          <div class="search-input" style="color: var(--text-muted); cursor: pointer; display: flex; align-items: center; pointer-events: none;">
+            Search for books, authors, subjects...
+          </div>
+          <svg class="search-icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 16px; width: 18px; height: 18px;"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </a>
+      </div>
+
+      <!-- Categories row -->
+      <div class="category-row" id="categories-container">
+        <button class="category-pill active" onclick="filterByCategory('all', this)">All Subjects</button>
+        <!-- Categories dynamic insertion -->
+      </div>
+
+      <!-- Hero Featured Slot -->
+      <div id="hero-spotlight-container">
+        <!-- Featured spotlight dynamic insertion -->
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">Opening library shelves...</div>
+      </div>
+
+      <!-- Popular Books Row -->
+      <div>
+        <div class="row-header">
+          <h2>Popular Titles</h2>
+          <a href="search.html?filter=popular">See All</a>
+        </div>
+        <div class="book-carousel" id="popular-books-carousel">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Recent Additions Row -->
+      <div style="margin-top: 10px;">
+        <div class="row-header">
+          <h2>Just Added</h2>
+          <a href="search.html?filter=recent">See All</a>
+        </div>
+        <div class="book-carousel" id="recent-books-carousel">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-logo-section" onclick="location.href='index.html'" style="cursor: pointer;">
+        <img src="images/logo-transparent.png?v=2" alt="Old African Books" class="footer-logo">
+        <h2>Old African Books</h2>
+      </div>
+      <p class="footer-text">Preserving African Literary Heritage, one page at a time. Explore classic literature, essays, and stories from across the continent.</p>
+      <div class="footer-links">
+        <a href="index.html">Library Home</a>
+        <a href="search.html">Explore Catalog</a>
+        <a href="shelf.html">My Reading Card</a>
+        <a href="admin.html">Staff Admin</a>
+      </div>
+      <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">&copy; 2026 Old African Books. All rights reserved.</p>
+    </footer>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <a href="search.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        Search
+      </a>
+      <a href="index.html" class="nav-item active">
+        <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Library
+      </a>
+      <button class="nav-item libby-menu-btn" onclick="if(window.API && window.API.isAuthenticated()) { showUserOptionsSheet(window.API.getUser()); } else { window.location.href='login.html'; }">
+        <div class="libby-menu-circle">
+          <svg viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        </div>
+      </button>
+      <a href="shelf.html" class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        Shelf
+      </a>
+      <a href="shelf.html?tab=history" class="nav-item">
+        <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Timeline
+      </a>
+    </nav>
+  </div>
+
+  <!-- Client-side Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let activeCategorySlug = 'all';
+
+    async function loadHomePage() {
+      try {
+        // Initial connection check is done in api.js
+        await API.init();
+
+        // Load Categories
+        const categories = await API.getCategories();
+        renderCategories(categories);
+
+        // Load Featured / Hero
+        const featured = await API.getFeaturedBooks();
+        renderHero(featured[0]);
+
+        // Load Carousels
+        const allBooks = await API.getBooks();
+        renderCarousels(allBooks);
+      } catch (err) {
+        console.error('Error loading homepage catalog data:', err);
+        showToast('Error syncing with remote catalog. Displaying offline shelf.', 'error');
+      }
+    }
+
+    function renderCategories(categories) {
+      const container = document.getElementById('categories-container');
+      // Keep "All Subjects" and append the rest
+      const allBtn = container.firstElementChild;
+      container.innerHTML = '';
+      container.appendChild(allBtn);
+
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = `category-pill ${activeCategorySlug === cat.slug ? 'active' : ''}`;
+        btn.textContent = cat.name;
+        btn.onclick = () => filterByCategory(cat.slug, btn);
+        container.appendChild(btn);
+      });
+    }
+
+    function renderHero(book) {
+      const container = document.getElementById('hero-spotlight-container');
+      if (!book) {
+        container.style.display = 'none';
+        return;
+      }
+      container.innerHTML = `
+        <div class="hero-spotlight">
+          <img class="hero-cover" src="${getBookCover(book)}" alt="${book.title}" onclick="location.href='book.html?id=${book.id}'">
+          <div class="hero-info">
+            <span class="hero-tag">Weekly Spotlight</span>
+            <h2 class="hero-title"><a href="book.html?id=${book.id}" style="color: inherit;">${book.title}</a></h2>
+            <p class="hero-author">by ${getAuthorNames(book)}</p>
+            <p class="hero-desc">${book.description}</p>
+            <div class="hero-actions">
+              <a href="read.html?id=${book.id}&sample=true" class="btn btn-primary btn-sm">Read Sample</a>
+              <button onclick="borrowBook(${book.id})" class="btn btn-secondary btn-sm">Borrow</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCarousels(books) {
+      // Popular (sort by views desc)
+      const popularCarousel = document.getElementById('popular-books-carousel');
+      const popularBooks = [...books].sort((a,b) => b.views - a.views).slice(0, 5);
+      popularCarousel.innerHTML = popularBooks.map(b => createBookCardHTML(b)).join('');
+
+      // Recent (sort by id desc)
+      const recentCarousel = document.getElementById('recent-books-carousel');
+      const recentBooks = [...books].sort((a,b) => b.id - a.id).slice(0, 5);
+      recentCarousel.innerHTML = recentBooks.map(b => createBookCardHTML(b)).join('');
+    }
+
+    function createBookCardHTML(book) {
+      return `
+        <div class="book-card">
+          <a href="book.html?id=${book.id}" class="book-card-cover-wrapper">
+            <img class="book-card-cover" src="${getBookCover(book)}" alt="${book.title}" loading="lazy">
+            <span class="book-card-badge">Available</span>
+          </a>
+          <h3 class="book-card-title"><a href="book.html?id=${book.id}">${book.title}</a></h3>
+          <p class="book-card-author">${getAuthorNames(book)}</p>
+          <div class="book-card-actions">
+            <button onclick="borrowBook(${book.id})" class="btn btn-outline btn-sm">Borrow</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function filterByCategory(slug, btnElement) {
+      activeCategorySlug = slug;
+
+      // Update visual active state
+      document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
+      btnElement.classList.add('active');
+
+      const carouselHeaders = document.querySelectorAll('.row-header');
+      const carousels = [
+        document.getElementById('popular-books-carousel'),
+        document.getElementById('recent-books-carousel')
+      ];
+
+      try {
+        if (slug === 'all') {
+          // Show normal carousel sections
+          carouselHeaders.forEach(el => el.style.display = 'flex');
+          loadHomePage();
+        } else {
+          // Hide standard carousel labels, fill first carousel with matches
+          carouselHeaders[0].firstElementChild.textContent = `${btnElement.textContent} Catalog`;
+          carouselHeaders[1].style.display = 'none';
+          carousels[1].innerHTML = '';
+
+          const catBooks = await API.getBooksByCategory(slug);
+          if (catBooks.length === 0) {
+            carousels[0].innerHTML = `<p style="padding: 20px; color: var(--text-muted);">No books in this subject yet.</p>`;
+          } else {
+            carousels[0].innerHTML = catBooks.map(b => createBookCardHTML(b)).join('');
+          }
+        }
+      } catch (err) {
+        console.error('Filter category error:', err);
+      }
+    }
+
+    async function borrowBook(id) {
+      if (!API.isAuthenticated()) {
+        showToast('Please sign in to borrow books.', 'error');
+        setTimeout(() => location.href = 'login.html', 1200);
+        return;
+      }
+
+      try {
+        // Record in history
+        await API.updateReadingHistory(id, 0);
+        showToast('Book added to your shelf loans!');
+        setTimeout(() => location.href = 'shelf.html', 1000);
+      } catch (err) {
+        showToast('Borrow failed. Please try again.', 'error');
+      }
+    }
+
+    // Run initialization
+    loadHomePage();
+  </script>
+</body>
+</html>

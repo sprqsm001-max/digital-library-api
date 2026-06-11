@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile - Old African Books</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-content">
+        <div class="header-logo" onclick="location.href='index.html'">
+          <img src="images/logo-transparent.png?v=2" alt="Logo">
+          <h1>Old African Books</h1>
+        </div>
+        <div class="header-actions">
+           <button class="user-btn" id="user-status-btn"></button>
+        </div>
+      </div>
+    </header>
+
+    <main class="view-content">
+      <div style="margin-bottom: 30px; text-align: center;">
+        <div id="profile-avatar" style="width: 80px; height: 80px; background: var(--bg-navy); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; margin: 0 auto 15px;">-</div>
+        <h2 id="display-username" style="font-family: var(--font-display); font-size: 1.8rem;">Profile Settings</h2>
+        <p id="display-email" style="color: var(--text-secondary);"></p>
+      </div>
+
+      <!-- Settings Form -->
+      <div class="auth-card" style="max-width: 500px; margin: 0 auto 30px; text-align: left;">
+        <h3 style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Update Information</h3>
+        <form onsubmit="handleUpdateProfile(event)">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="profile-username" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" id="profile-email" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; margin-top: 10px;">Save Changes</button>
+        </form>
+      </div>
+
+      <div class="auth-card" style="max-width: 500px; margin: 0 auto 30px; text-align: left;">
+        <h3 style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Security</h3>
+        <form onsubmit="handleChangePassword(event)">
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input type="password" id="old-password" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" id="new-password" class="form-control" minlength="8" required>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;">Update Password</button>
+        </form>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 40px;">
+          <button onclick="API.logout()" class="btn btn-outline btn-sm" style="color: var(--accent-coral); border-color: var(--accent-coral);">Sign Out of Library</button>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <div class="footer-logo-section" onclick="location.href='index.html'">
+        <img src="images/logo-transparent.png?v=2" alt="Logo" class="footer-logo">
+        <h2>Old African Books</h2>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="shelf.html">My Shelf</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!API.isAuthenticated()) {
+        location.href = 'login.html';
+        return;
+      }
+      loadProfileData();
+    });
+
+    function loadProfileData() {
+      const user = API.getUser();
+      document.getElementById('profile-avatar').textContent = user.username.substring(0, 2).toUpperCase();
+      document.getElementById('display-username').textContent = user.username;
+      document.getElementById('display-email').textContent = user.email || '';
+
+      document.getElementById('profile-username').value = user.username;
+      document.getElementById('profile-email').value = user.email || '';
+    }
+
+    async function handleUpdateProfile(e) {
+      e.preventDefault();
+      const username = document.getElementById('profile-username').value.trim();
+      const email = document.getElementById('profile-email').value.trim();
+
+      try {
+        showToast('Updating profile...');
+        const updatedUser = await API.request('/users/me', {
+          method: 'PUT',
+          body: JSON.stringify({ username, email })
+        });
+
+        // Update local storage via API helper if exists, or manually
+        API.saveAuth(API.getToken(), updatedUser);
+        loadProfileData();
+        showToast('Profile updated successfully');
+      } catch (err) {
+        showToast(err.message || 'Update failed', 'error');
+      }
+    }
+
+    async function handleChangePassword(e) {
+      e.preventDefault();
+      const old_password = document.getElementById('old-password').value;
+      const new_password = document.getElementById('new-password').value;
+
+      try {
+        showToast('Updating password...');
+        await API.request('/auth/change-password', {
+          method: 'POST',
+          body: JSON.stringify({ old_password, new_password })
+        });
+
+        document.getElementById('old-password').value = '';
+        document.getElementById('new-password').value = '';
+        showToast('Password updated successfully');
+      } catch (err) {
+        showToast(err.message || 'Password update failed', 'error');
+      }
+    }
+  </script>
+</body>
+</html>
