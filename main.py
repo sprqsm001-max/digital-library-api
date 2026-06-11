@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
 import sys
+import traceback
 from dotenv import load_dotenv
 
 # Add current directory to path to ensure proper package imports
@@ -55,6 +57,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global exception handler — ensures 500 errors return JSON with CORS headers
+# Without this, unhandled DB errors return plain-text 500s that browsers block as CORS errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"Unhandled error on {request.method} {request.url.path}: {exc}")
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Database may be temporarily unavailable."}
+    )
+
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(books.router, prefix="/books", tags=["books"])
@@ -64,7 +77,12 @@ app.include_router(admin.router, prefix="/admin", tags=["admin"])
 # Health check endpoint
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    from database import tunnel, tunnel_error
+    return {
+        "status": "ok",
+        "ssh_tunnel": "connected" if tunnel and tunnel.is_active else "disconnected",
+        "tunnel_error": tunnel_error
+    }
 
 
 
