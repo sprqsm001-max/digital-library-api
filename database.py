@@ -14,6 +14,7 @@ SSH_USERNAME = os.getenv("SSH_USERNAME")
 SSH_PASSWORD = os.getenv("SSH_PASSWORD")
 
 tunnel = None
+tunnel_error = None
 
 if SSH_HOST and SSH_USERNAME:
     try:
@@ -38,6 +39,7 @@ if SSH_HOST and SSH_USERNAME:
                     DATABASE_URL = f"{schema}{creds}@127.0.0.1:5433/{dbname}"
                     break
     except Exception as e:
+        tunnel_error = str(e)
         print(f"Failed to start SSH Tunnel: {e}")
 
 if not DATABASE_URL:

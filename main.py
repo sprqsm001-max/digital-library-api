@@ -83,5 +83,6 @@ def debug():
         "ssh_password_set": bool(os.getenv("SSH_PASSWORD")),
         "database_url_set": bool(os.getenv("DATABASE_URL")),
         "tunnel_active": database.tunnel is not None and getattr(database.tunnel, "is_active", False),
+        "tunnel_error": getattr(database, "tunnel_error", None),
         "database_url_used": db_url_masked
     }
