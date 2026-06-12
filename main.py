@@ -85,12 +85,24 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Health check endpoint
 @app.get("/health")
 def health():
-    from database import tunnel, tunnel_error
+    from database import tunnel, tunnel_error, SessionLocal
+    db_error = None
+    try:
+        db = SessionLocal()
+        # Test basic query
+        from sqlalchemy import text
+        db.execute(text("SELECT 1"))
+        db.close()
+    except Exception as e:
+        db_error = str(e)
+        
     return {
-        "status": "ok",
+        "status": "ok" if not db_error else "db_error",
         "ssh_tunnel": "connected" if tunnel and tunnel.is_active else "disconnected",
-        "tunnel_error": tunnel_error
+        "tunnel_error": tunnel_error,
+        "db_error": db_error
     }
+
 
 
 
