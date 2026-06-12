@@ -26,12 +26,24 @@ def run_auto_migrations():
         migrations = [
             # Add progress_percent to reading_history if it doesn't exist
             "ALTER TABLE reading_history ADD COLUMN IF NOT EXISTS progress_percent INTEGER DEFAULT 0;",
+            # Create epub_media table if it doesn't exist
+            """
+            CREATE TABLE IF NOT EXISTS epub_media (
+                id SERIAL PRIMARY KEY,
+                book_id INTEGER REFERENCES books(id) ON DELETE CASCADE,
+                file_path VARCHAR(500) NOT NULL,
+                content_type VARCHAR(100) NOT NULL,
+                file_bytes BYTEA NOT NULL
+            );
+            """,
+            # Create index on epub_media if it doesn't exist
+            "CREATE INDEX IF NOT EXISTS idx_epub_media_book_path ON epub_media (book_id, file_path);"
         ]
         for sql in migrations:
             try:
                 db.execute(text(sql))
                 db.commit()
-                print(f"[migration] Applied: {sql[:60]}...")
+                print(f"[migration] Applied: {sql[:60].strip()}...")
             except Exception as e:
                 db.rollback()
                 print(f"[migration] Skipped (may already exist): {e}")
@@ -40,10 +52,79 @@ def run_auto_migrations():
     except Exception as e:
         print(f"[migration] Auto-migration failed: {e}")
 
+def run_epub_image_migrations():
+    """Extract and save images for existing EPUB books in the database if not already done."""
+    try:
+        from database import SessionLocal
+        import models
+        from utils.epub_parser import parse_epub_metadata
+        import os
+        import mimetypes
+        
+        db = SessionLocal()
+        books = db.query(models.Book).filter(models.Book.file_type == "epub").all()
+        print(f"[migration] Checking {len(books)} EPUB books for image migrations.")
+        
+        static_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        for book in books:
+            # Check if this book already has media
+            media_count = db.query(models.EPUBMedia).filter(models.EPUBMedia.book_id == book.id).count()
+            if media_count > 0:
+                print(f"[migration] Book ID {book.id} ('{book.title}') already has {media_count} images extracted.")
+                continue
+                
+            # If not, let's try to extract from the EPUB file
+            if not book.file_url:
+                continue
+            filename = book.file_url.split("/")[-1]
+            epub_path = os.path.join(static_dir, "static", "uploads", "books", filename)
+            
+            if not os.path.exists(epub_path):
+                print(f"[migration] EPUB file not found on server for Book ID {book.id}: {epub_path}")
+                continue
+                
+            print(f"[migration] Extracting images for Book ID {book.id} ('{book.title}')...")
+            with open(epub_path, "rb") as f:
+                epub_bytes = f.read()
+                
+            epub_data = parse_epub_metadata(epub_bytes)
+            if not epub_data:
+                continue
+                
+            extracted_images = epub_data.get("extracted_images", {})
+            if extracted_images:
+                for relative_path, img_bytes in extracted_images.items():
+                    content_type, _ = mimetypes.guess_type(relative_path)
+                    if not content_type:
+                        content_type = "image/jpeg"
+                    
+                    db_media = models.EPUBMedia(
+                        book_id=book.id,
+                        file_path=relative_path,
+                        content_type=content_type,
+                        file_bytes=img_bytes
+                    )
+                    db.add(db_media)
+                
+                # Replace the relative path references in content_text to point to the media serving endpoint
+                content_text = epub_data["content_text"].replace(
+                    "__EPUB_MEDIA__/",
+                    f"/books/{book.id}/media/"
+                )
+                book.content_text = content_text
+                db.commit()
+                print(f"[migration] Successfully migrated {len(extracted_images)} images for Book ID {book.id}!")
+        db.close()
+    except Exception as e:
+        print(f"[migration] EPUB image migration failed: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run schema migrations on startup
     run_auto_migrations()
+    # Run EPUB image migrations on startup
+    run_epub_image_migrations()
     yield
     try:
         from database import tunnel

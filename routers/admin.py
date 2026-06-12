@@ -170,6 +170,30 @@ async def upload_epub_books(
             db.commit()
             db.refresh(db_book)
             
+            # Save extracted EPUB images if any
+            extracted_images = epub_data.get("extracted_images", {})
+            if extracted_images:
+                import mimetypes
+                for relative_path, img_bytes in extracted_images.items():
+                    content_type, _ = mimetypes.guess_type(relative_path)
+                    if not content_type:
+                        content_type = "image/jpeg"
+                    db_media = models.EPUBMedia(
+                        book_id=db_book.id,
+                        file_path=relative_path,
+                        content_type=content_type,
+                        file_bytes=img_bytes
+                    )
+                    db.add(db_media)
+                
+                # Update content_text path placeholders to point to database serving endpoint
+                db_book.content_text = db_book.content_text.replace(
+                    "__EPUB_MEDIA__/",
+                    f"/books/{db_book.id}/media/"
+                )
+                db.commit()
+                db.refresh(db_book)
+            
             results.append({
                 "id": db_book.id,
                 "title": db_book.title,

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Table, DateTime, func
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Table, DateTime, func, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import ARRAY, TSVECTOR
 from database import Base
@@ -113,3 +113,14 @@ class Review(Base):
     # Relationships
     user = relationship("User", back_populates="reviews")
     book = relationship("Book", back_populates="reviews")
+
+
+class EPUBMedia(Base):
+    __tablename__ = "epub_media"
+
+    id = Column(Integer, primary_key=True, index=True)
+    book_id = Column(Integer, ForeignKey("books.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_path = Column(String(500), nullable=False, index=True)
+    content_type = Column(String(100), nullable=False)
+    file_bytes = Column(LargeBinary, nullable=False)
+

@@ -23,6 +23,44 @@ def find_elements_by_tag(parent, tag_name):
             results.append(el)
     return results
 
+def resolve_zip_path(base_dir, relative_path):
+    relative_path = urllib.parse.unquote(relative_path).strip()
+    if relative_path.startswith(("http:", "https:", "data:")):
+        return None
+    if base_dir:
+        full_path = base_dir + "/" + relative_path
+    else:
+        full_path = relative_path
+    parts = []
+    for part in full_path.split("/"):
+        if part == "..":
+            if parts:
+                parts.pop()
+        elif part != "." and part != "":
+            parts.append(part)
+    return "/".join(parts)
+
+def rewrite_img_sources(html_content, html_dir_zip, zip_file, extracted_images):
+    def sub_cb(match):
+        img_tag = match.group(0)
+        src_match = re.search(r'src=["\']([^"\']+)["\']', img_tag, re.IGNORECASE)
+        if src_match:
+            src_val = src_match.group(1)
+            resolved = resolve_zip_path(html_dir_zip, src_val)
+            if resolved and resolved in zip_file.namelist():
+                try:
+                    img_bytes = zip_file.read(resolved)
+                    extracted_images[resolved] = img_bytes
+                    new_src = f"__EPUB_MEDIA__/{resolved}"
+                    new_img_tag = img_tag.replace(src_match.group(0), f'src="{new_src}"')
+                    return new_img_tag
+                except Exception as ex:
+                    print(f"Failed to read image {resolved} from zip: {ex}")
+        return img_tag
+
+    # Match <img ... src="..." ...> tags
+    return re.sub(r'<img\s+[^>]*src\s*=\s*["\'][^"\']*["\'][^>]*>', sub_cb, html_content, flags=re.IGNORECASE)
+
 def parse_epub_metadata(epub_bytes: bytes) -> dict:
     """
     Parses metadata and content from an EPUB file in bytes.
@@ -198,6 +236,7 @@ def parse_epub_metadata(epub_bytes: bytes) -> dict:
         # 5. Extract text content from Spine
         spine = find_element_by_tag(opf_root, "spine")
         content_text_list = []
+        extracted_images = {}
         if spine is not None:
             itemrefs = find_elements_by_tag(spine, "itemref")
             for ref in itemrefs:
@@ -223,6 +262,10 @@ def parse_epub_metadata(epub_bytes: bytes) -> dict:
                         except UnicodeDecodeError:
                             html_str = html_bytes.decode("latin-1")
                             
+                        # Rewrite relative img sources to absolute placeholdered paths and extract images
+                        html_dir_zip = "/".join(html_zip_path.split("/")[:-1])
+                        html_str = rewrite_img_sources(html_str, html_dir_zip, z, extracted_images)
+
                         # Extract inner <body> to prevent multiple <html>/<head> nesting
                         body_match = re.search(r"<body[^>]*>(.*?)</body>", html_str, re.DOTALL | re.IGNORECASE)
                         if body_match:
@@ -247,7 +290,8 @@ def parse_epub_metadata(epub_bytes: bytes) -> dict:
             "subjects": subjects,
             "cover_image_bytes": cover_image_bytes,
             "cover_image_type": cover_image_type,
-            "content_text": content_text
+            "content_text": content_text,
+            "extracted_images": extracted_images
         }
     except Exception as e:
         print(f"Error parsing EPUB file: {e}")

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List, Optional
@@ -158,3 +158,19 @@ def increment_download_count(id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(book)
     return {"file_url": book.file_url, "download_count": book.download_count}
+
+@router.get("/{id}/media/{path:path}")
+def get_epub_media(id: int, path: str, db: Session = Depends(get_db)):
+    from models import EPUBMedia
+    clean_path = path.replace("\\", "/")
+    media = db.query(EPUBMedia).filter(
+        EPUBMedia.book_id == id,
+        EPUBMedia.file_path == clean_path
+    ).first()
+    if not media:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Media file not found in ebook resources"
+        )
+    return Response(content=media.file_bytes, media_type=media.content_type)
+
