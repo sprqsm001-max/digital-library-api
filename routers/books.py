@@ -101,6 +101,10 @@ def get_books_by_category(
     
     return books
 
+@router.get("/categories", response_model=List[schemas.CategoryResponse])
+def list_categories(db: Session = Depends(get_db)):
+    return db.query(models.Category).order_by(models.Category.name).all()
+
 @router.get("/{id}", response_model=schemas.BookDetailResponse)
 def get_book_detail(id: int, db: Session = Depends(get_db)):
     book = db.query(models.Book).filter(models.Book.id == id).first()
