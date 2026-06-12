@@ -59,7 +59,31 @@ def rewrite_img_sources(html_content, html_dir_zip, zip_file, extracted_images):
         return img_tag
 
     # Match <img ... src="..." ...> tags
-    return re.sub(r'<img\s+[^>]*src\s*=\s*["\'][^"\']*["\'][^>]*>', sub_cb, html_content, flags=re.IGNORECASE)
+    html_content = re.sub(r'<img\s+[^>]*src\s*=\s*["\'][^"\']*["\'][^>]*>', sub_cb, html_content, flags=re.IGNORECASE)
+
+    def image_sub_cb(match):
+        image_tag = match.group(0)
+        href_match = re.search(r'(?:xlink:)?href=["\']([^"\']+)["\']', image_tag, re.IGNORECASE)
+        if href_match:
+            href_val = href_match.group(1)
+            resolved = resolve_zip_path(html_dir_zip, href_val)
+            if resolved and resolved in zip_file.namelist():
+                try:
+                    img_bytes = zip_file.read(resolved)
+                    extracted_images[resolved] = img_bytes
+                    new_src = f"__EPUB_MEDIA__/{resolved}"
+                    new_image_tag = image_tag.replace(href_match.group(0), f'xlink:href="{new_src}"')
+                    if 'xlink:href' not in href_match.group(0).lower():
+                        new_image_tag = image_tag.replace(href_match.group(0), f'href="{new_src}"')
+                    return new_image_tag
+                except Exception as ex:
+                    print(f"Failed to read SVG image {resolved} from zip: {ex}")
+        return image_tag
+
+    # Match SVG <image ...> tags
+    html_content = re.sub(r'<image\s+[^>]*>', image_sub_cb, html_content, flags=re.IGNORECASE)
+
+    return html_content
 
 def parse_epub_metadata(epub_bytes: bytes) -> dict:
     """
