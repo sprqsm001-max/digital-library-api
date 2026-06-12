@@ -18,6 +18,12 @@ load_dotenv()
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Auto-correct incorrect database credentials (like user 'oldafric' typos in Render settings)
+if DATABASE_URL and "oldafric_oldafricanbooks_user" not in DATABASE_URL and "oldafric" in DATABASE_URL:
+    print("Auto-correcting database credentials in DATABASE_URL...")
+    DATABASE_URL = "postgresql://oldafric_oldafricanbooks_user:Oldafricanbooks@wghp8.wghservers.com:5432/oldafric_oldafricanbooks_db"
+
 SSH_HOST = os.getenv("SSH_HOST")
 SSH_PORT = int(os.getenv("SSH_PORT", "22"))
 SSH_USERNAME = os.getenv("SSH_USERNAME")
