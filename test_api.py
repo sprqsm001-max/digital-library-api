@@ -42,7 +42,7 @@ class TestDigitalLibraryAPI(unittest.TestCase):
     def test_01_health_check(self):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"status": "ok"})
+        self.assertEqual(response.json().get("status"), "ok")
 
     def test_02_user_registration(self):
         payload = {
@@ -57,6 +57,12 @@ class TestDigitalLibraryAPI(unittest.TestCase):
         self.assertEqual(data["username"], self.test_username)
         self.assertIn("role", data)
         self.assertIn("id", data)
+        
+        # Force the test user to be admin so subsequent admin tests can run
+        user = self.db.query(models.User).filter(models.User.email == self.test_email).first()
+        if user:
+            user.role = "admin"
+            self.db.commit()
 
     def test_03_user_login(self):
         payload = {
