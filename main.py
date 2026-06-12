@@ -74,6 +74,14 @@ app.include_router(books.router, prefix="/books", tags=["books"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
+# Mount static files directory
+from fastapi.staticfiles import StaticFiles
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+os.makedirs(os.path.join(STATIC_DIR, "uploads", "books"), exist_ok=True)
+os.makedirs(os.path.join(STATIC_DIR, "uploads", "covers"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
 # Health check endpoint
 @app.get("/health")
 def health():

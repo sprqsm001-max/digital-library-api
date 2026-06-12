@@ -1,14 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from typing import List
 from pydantic import BaseModel
+import os
+import re
+import uuid
 from database import get_db
 import models
 import schemas
 from utils.auth import require_admin
+from utils.epub_parser import parse_epub_metadata
+
+# Upload paths relative to the project root where main.py resides
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads", "books")
+COVER_DIR = os.path.join(STATIC_DIR, "uploads", "covers")
+
+# Make sure directories exist
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(COVER_DIR, exist_ok=True)
+
+def make_slug(name: str) -> str:
+    cleaned = re.sub(r"[^\w\s-]", "", name).lower()
+    return re.sub(r"[-\s_]+", "-", cleaned).strip("-")
 
 router = APIRouter()
+
 
 @router.post("/books", response_model=schemas.BookResponse, status_code=status.HTTP_201_CREATED)
 def create_book(
@@ -37,6 +55,142 @@ def create_book(
     db.commit()
     db.refresh(db_book)
     return db_book
+
+@router.post("/books/upload-epub", status_code=status.HTTP_201_CREATED)
+async def upload_epub_books(
+    files: List[UploadFile] = File(...),
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    results = []
+    errors = []
+    
+    for file in files:
+        if not file.filename.lower().endswith(".epub"):
+            errors.append({"filename": file.filename, "error": "Only .epub files are supported"})
+            continue
+            
+        try:
+            contents = await file.read()
+            epub_data = parse_epub_metadata(contents)
+            if not epub_data:
+                errors.append({"filename": file.filename, "error": "Failed to parse EPUB metadata"})
+                continue
+                
+            # Check if book already exists
+            existing_book = db.query(models.Book).filter(
+                models.Book.title.ilike(epub_data["title"]),
+                models.Book.author.ilike(epub_data["author"])
+            ).first()
+            if existing_book:
+                errors.append({"filename": file.filename, "error": f"Book '{epub_data['title']}' by {epub_data['author']} already exists"})
+                continue
+                
+            # Category selection
+            category_id = None
+            subjects = epub_data.get("subjects", [])
+            db_cat = None
+            if subjects:
+                primary_subject = subjects[0]
+                cat_slug = make_slug(primary_subject)
+                db_cat = db.query(models.Category).filter(
+                    (models.Category.slug == cat_slug) | (models.Category.name.ilike(primary_subject))
+                ).first()
+                if not db_cat:
+                    db_cat = models.Category(
+                        name=primary_subject,
+                        slug=cat_slug,
+                        description=f"Books related to {primary_subject}"
+                    )
+                    db.add(db_cat)
+                    db.commit()
+                    db.refresh(db_cat)
+                category_id = db_cat.id
+            else:
+                db_cat = db.query(models.Category).filter(models.Category.slug == "uncategorized").first()
+                if not db_cat:
+                    db_cat = models.Category(
+                        name="Uncategorized",
+                        slug="uncategorized",
+                        description="Books without a specific subject category"
+                    )
+                    db.add(db_cat)
+                    db.commit()
+                    db.refresh(db_cat)
+                category_id = db_cat.id
+                
+            # Save files
+            unique_id = str(uuid.uuid4())
+            safe_title = make_slug(epub_data["title"]) or "book"
+            
+            # Save EPUB
+            epub_filename = f"{safe_title}_{unique_id}.epub"
+            epub_filepath = os.path.join(UPLOAD_DIR, epub_filename)
+            with open(epub_filepath, "wb") as f:
+                f.write(contents)
+                
+            # Save cover
+            cover_image_url = None
+            if epub_data.get("cover_image_bytes"):
+                mime = epub_data.get("cover_image_type", "")
+                ext = ".jpg"
+                if "png" in mime:
+                    ext = ".png"
+                elif "gif" in mime:
+                    ext = ".gif"
+                cover_filename = f"{safe_title}_{unique_id}{ext}"
+                cover_filepath = os.path.join(COVER_DIR, cover_filename)
+                with open(cover_filepath, "wb") as f:
+                    f.write(epub_data["cover_image_bytes"])
+                cover_image_url = f"/static/uploads/covers/{cover_filename}"
+                
+            file_url = f"/static/uploads/books/{epub_filename}"
+            file_size_kb = len(contents) // 1024
+            
+            # Create Book DB record
+            db_book = models.Book(
+                title=epub_data["title"],
+                author=epub_data["author"],
+                description=epub_data["description"] or f"Ebook copy of {epub_data['title']}.",
+                cover_image_url=cover_image_url,
+                file_url=file_url,
+                file_type="epub",
+                file_size_kb=file_size_kb,
+                language=epub_data["language"] or "English",
+                publication_year=epub_data["publication_year"],
+                publisher=epub_data["publisher"],
+                isbn=epub_data["isbn"],
+                category_id=category_id,
+                tags=subjects,
+                is_public=True,
+                uploaded_by=current_user.id,
+                content_text=epub_data["content_text"]
+            )
+            db.add(db_book)
+            db.commit()
+            db.refresh(db_book)
+            
+            results.append({
+                "id": db_book.id,
+                "title": db_book.title,
+                "author": db_book.author,
+                "category_id": db_book.category_id,
+                "category_name": db_cat.name if db_cat else "Uncategorized",
+                "cover_image_url": db_book.cover_image_url,
+                "file_url": db_book.file_url,
+                "file_size_kb": db_book.file_size_kb,
+                "language": db_book.language,
+                "publication_year": db_book.publication_year,
+                "publisher": db_book.publisher,
+                "isbn": db_book.isbn,
+                "tags": db_book.tags,
+                "created_at": db_book.created_at.isoformat() if db_book.created_at else None
+            })
+        except Exception as e:
+            errors.append({"filename": file.filename, "error": str(e)})
+            
+    return {"uploaded": results, "errors": errors}
+
 
 @router.put("/books/{id}", response_model=schemas.BookResponse)
 def update_book(

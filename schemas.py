@@ -82,6 +82,7 @@ class BookBase(BaseModel):
     category_id: Optional[int] = None
     tags: Optional[List[str]] = []
     is_public: Optional[bool] = True
+    content_text: Optional[str] = None
 
 class BookCreate(BookBase):
     pass
@@ -101,6 +102,8 @@ class BookUpdate(BaseModel):
     category_id: Optional[int] = None
     tags: Optional[List[str]] = None
     is_public: Optional[bool] = None
+    content_text: Optional[str] = None
+
 
 class BookResponse(BookBase):
     id: int

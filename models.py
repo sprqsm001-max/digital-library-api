@@ -58,6 +58,8 @@ class Book(Base):
     uploaded_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    content_text = Column(Text, nullable=True)
+
 
     # FTS Column mapped as read-only (since it is maintained by database trigger)
     search_vector = Column(TSVECTOR, index=False, nullable=True)
