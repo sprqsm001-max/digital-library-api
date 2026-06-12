@@ -15,6 +15,8 @@ from contextlib import asynccontextmanager
 
 load_dotenv()
 
+last_traceback = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
@@ -61,6 +63,8 @@ app.add_middleware(
 # Without this, unhandled DB errors return plain-text 500s that browsers block as CORS errors
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    global last_traceback
+    last_traceback = traceback.format_exc()
     print(f"Unhandled error on {request.method} {request.url.path}: {exc}")
     traceback.print_exc()
     return JSONResponse(
@@ -101,6 +105,7 @@ def health():
         "ssh_tunnel": "connected" if tunnel and tunnel.is_active else "disconnected",
         "tunnel_error": tunnel_error,
         "db_error": db_error,
+        "last_error": last_traceback,
         "env": {k: (v[:15] + "..." if len(v) > 15 else "...") if any(x in k.lower() for x in ["url", "pass", "secret", "key", "token"]) else v for k, v in os.environ.items()}
     }
 
