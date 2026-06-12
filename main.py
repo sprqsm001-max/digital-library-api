@@ -17,8 +17,33 @@ load_dotenv()
 
 last_traceback = None
 
+def run_auto_migrations():
+    """Apply incremental schema changes that models can't handle via create_all."""
+    try:
+        from database import SessionLocal
+        from sqlalchemy import text
+        db = SessionLocal()
+        migrations = [
+            # Add progress_percent to reading_history if it doesn't exist
+            "ALTER TABLE reading_history ADD COLUMN IF NOT EXISTS progress_percent INTEGER DEFAULT 0;",
+        ]
+        for sql in migrations:
+            try:
+                db.execute(text(sql))
+                db.commit()
+                print(f"[migration] Applied: {sql[:60]}...")
+            except Exception as e:
+                db.rollback()
+                print(f"[migration] Skipped (may already exist): {e}")
+        db.close()
+        print("[migration] Auto-migrations complete.")
+    except Exception as e:
+        print(f"[migration] Auto-migration failed: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Run schema migrations on startup
+    run_auto_migrations()
     yield
     try:
         from database import tunnel
