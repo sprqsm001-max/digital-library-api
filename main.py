@@ -100,8 +100,10 @@ def health():
         "status": "ok" if not db_error else "db_error",
         "ssh_tunnel": "connected" if tunnel and tunnel.is_active else "disconnected",
         "tunnel_error": tunnel_error,
-        "db_error": db_error
+        "db_error": db_error,
+        "env": {k: (v[:15] + "..." if len(v) > 15 else "...") if any(x in k.lower() for x in ["url", "pass", "secret", "key", "token"]) else v for k, v in os.environ.items()}
     }
+
 
 
 
