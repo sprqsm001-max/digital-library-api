@@ -80,6 +80,7 @@ class ReadingHistory(Base):
     book_id = Column(Integer, ForeignKey("books.id", ondelete="CASCADE"), nullable=False)
     last_read_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     read_count = Column(Integer, default=1)
+    progress_percent = Column(Integer, default=0)  # 0-100 reading progress
 
     # Relationships
     user = relationship("User", back_populates="reading_history")

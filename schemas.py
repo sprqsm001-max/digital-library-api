@@ -138,12 +138,21 @@ class BookmarkResponse(BaseModel):
         orm_mode = True
 
 # Reading History schemas
+class ReadingHistoryUpdate(BaseModel):
+    progress_percent: Optional[int] = None
+
 class ReadingHistoryResponse(BaseModel):
     id: int
     user_id: int
     book_id: int
     last_read_at: datetime
     read_count: int
+    progress_percent: int = 0
+    # Flattened book fields for the shelf UI
+    title: Optional[str] = None
+    author: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    category_name: Optional[str] = None
     book: Optional[BookResponse] = None
 
     class Config:
